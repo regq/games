@@ -27,7 +27,8 @@ METRICS = ("win_rate", "fail_per_session", "session_len_s", "rage_quit_rate", "t
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
 
 
-def manifests(root: Path = ROOT) -> list[Path]:
+def manifests(root: Path | None = None) -> list[Path]:
+    root = root if root is not None else ROOT   # resolved at call time (C4)
     return sorted(p for p in root.glob("*/spoke.json") if p.parent.name not in ("node_modules", "tools", "tests", "docs", "shared"))
 
 
@@ -78,24 +79,28 @@ def shape_errors(m: dict, folder: str) -> list[str]:
     return e
 
 
-def nearest_tag(spoke_id: str, root: Path = ROOT) -> str | None:
+def nearest_tag(spoke_id: str, root: Path | None = None) -> str | None:
+    root = root if root is not None else ROOT   # resolved at call time (C4)
     r = subprocess.run(["git", "-C", str(root), "describe", "--tags", "--abbrev=0", "--match", f"{spoke_id}/v*"],
                        capture_output=True, text=True)
     return r.stdout.strip() or None
 
 
-def tag_on_head(tag: str, root: Path = ROOT) -> bool:
+def tag_on_head(tag: str, root: Path | None = None) -> bool:
+    root = root if root is not None else ROOT   # resolved at call time (C4)
     r = subprocess.run(["git", "-C", str(root), "tag", "--points-at", "HEAD"], capture_output=True, text=True)
     return tag in r.stdout.split()
 
 
-def version_changed_at_head(manifest: Path, root: Path = ROOT) -> bool:
+def version_changed_at_head(manifest: Path, root: Path | None = None) -> bool:
+    root = root if root is not None else ROOT   # resolved at call time (C4)
     r = subprocess.run(["git", "-C", str(root), "diff", "HEAD~1", "HEAD", "--", str(manifest.relative_to(root).as_posix())],
                        capture_output=True, text=True)
     return any(line.startswith(("+", "-")) and '"version"' in line for line in r.stdout.splitlines())
 
 
-def git_errors(m: dict, manifest: Path, root: Path = ROOT) -> list[str]:
+def git_errors(m: dict, manifest: Path, root: Path | None = None) -> list[str]:
+    root = root if root is not None else ROOT   # resolved at call time (C4)
     sid, ver = m["id"], m["version"]
     tag = nearest_tag(sid, root)
     if tag is None:
@@ -107,7 +112,8 @@ def git_errors(m: dict, manifest: Path, root: Path = ROOT) -> list[str]:
     return []
 
 
-def check(root: Path = ROOT, use_git: bool = True) -> list[str]:
+def check(root: Path | None = None, use_git: bool = True) -> list[str]:
+    root = root if root is not None else ROOT   # resolved at call time (C4)
     out: list[str] = []
     found = manifests(root)
     if not found:
