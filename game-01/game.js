@@ -9,6 +9,10 @@
  * the flag plays that level with the overrides merged over the base row. An
  * increment that only changes numbers ships as a variant plus a flag in
  * spoke.json -- no engine change, no new tag needed for the content itself.
+ *
+ * Support doors (2026-09-22): spoke.json `support.kofi`. Two surfaces -- a small
+ * persistent link under the game and a prompt after the last win -- both hidden
+ * while the value is empty, both emitting one `purchase` (value null) per click.
  */
 function applyVariants(base, variants, flags) {
   let out = base;
@@ -18,7 +22,17 @@ function applyVariants(base, variants, flags) {
   }
   return out;
 }
-if (typeof module === "object" && module.exports) module.exports = { applyVariants };
+
+/* The Ko-fi door, from spoke.json `support.kofi`. Empty or absent = "" and every
+ * support surface stays hidden, so the slot ships long before the page does.
+ * Ko-fi's free tier has no callback: the click is all this side ever learns, so
+ * the `purchase` it emits carries value null -- a door opened, never a sale.
+ * (DEFERRED 2026-09-22: a Stripe-backed shop is what would carry an amount.) */
+function supportUrl(manifest) {
+  const u = (manifest && manifest.support && manifest.support.kofi) || "";
+  return /^https:\/\/ko-fi\.com\/[A-Za-z0-9_-]+\/?$/.test(u) ? u : "";
+}
+if (typeof module === "object" && module.exports) module.exports = { applyVariants, supportUrl };
 
 if (typeof document !== "undefined") (async function () {
   "use strict";
@@ -29,6 +43,7 @@ if (typeof document !== "undefined") (async function () {
 
   const levels = content.levels;
   const variants = content.variants || {};
+  const kofi = supportUrl(manifest);              // "" until the Ko-fi page is set in spoke.json
   let li = 0, attempt = 0, fill = 0, filling = false, raf = 0, startedAt = 0, lastPress = 0, done = false;
   // fill is a function of wall-clock hold time, never of frames: a throttled or
   // hidden tab must not change how much the gauge filled (found 09-21 in a background tab)
@@ -71,6 +86,7 @@ if (typeof document !== "undefined") (async function () {
         say("You filled all three bands. Nice.");
         $("hold").disabled = true;
         $("after").classList.remove("hidden");
+        if (kofi) $("tip").classList.remove("hidden");
       } else {
         li += 1; attempt = 0; fill = 0;
         say("Level " + level().n + " of " + levels.length + " — band shrinks");
@@ -92,9 +108,26 @@ if (typeof document !== "undefined") (async function () {
   btn.addEventListener("keydown", e => { if (e.code === "Space" && !e.repeat) { e.preventDefault(); if (!filling) start(); } });
   btn.addEventListener("keyup", e => { if (e.code === "Space") { e.preventDefault(); if (filling) stop(); } });
 
+  // support doors: the persistent small one under the game, the prompt after the
+  // last win. Both open a new tab so the session lives on (its pagehide beacon is
+  // the backup route); the event is flushed first so a single click lands without
+  // waiting for the batch to fill.
+  if (kofi) {
+    for (const [wrap, link, where] of [["support", "support-link", "footer"], ["tip", "tip-link", "win"]]) {
+      $(link).href = kofi;
+      $(wrap).classList.remove("hidden");
+      $(link).addEventListener("click", () => {
+        T.event("purchase", null, { level: level().n, via: "kofi", where });
+        T.flush();
+        refreshDev();
+      });
+    }
+    $("tip").classList.add("hidden");            // the win prompt waits for the last win
+  }
+
   $("up").addEventListener("click", () => { T.event("thumbs", 1, { level: 3 }); $("up").disabled = $("down").disabled = true; refreshDev(); });
   $("down").addEventListener("click", () => { T.event("thumbs", -1, { level: 3 }); $("up").disabled = $("down").disabled = true; refreshDev(); });
-  $("again").addEventListener("click", () => { li = 0; attempt = 0; fill = 0; done = false; $("hold").disabled = false; $("after").classList.add("hidden"); $("up").disabled = $("down").disabled = false; say("Level 1 of 3"); draw(); });
+  $("again").addEventListener("click", () => { li = 0; attempt = 0; fill = 0; done = false; $("hold").disabled = false; $("after").classList.add("hidden"); $("tip").classList.add("hidden"); $("up").disabled = $("down").disabled = false; say("Level 1 of 3"); draw(); });
   $("report").addEventListener("click", () => {
     const reason = (prompt("What went wrong? (one line, no personal details)") || "").trim().slice(0, 140);
     if (reason) { T.event("report", null, { level: level().n, reason }); say("Thanks — noted."); refreshDev(); }

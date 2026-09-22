@@ -5,9 +5,9 @@
 
 Checks, per manifest:
   - shape: id == folder name, kind, semver version, repo, url, telemetry
-    {endpoint, batch, flush_s}, flags {name: {rollout, since, window_h,
-    metric, expect, issue}}, health.url (or health.hub_tool), rollback_ref,
-    increment.prompt_version
+    {endpoint, batch, flush_s}, optional support {kofi: '' | a Ko-fi page URL},
+    flags {name: {rollout, since, window_h, metric, expect, issue}},
+    health.url (or health.hub_tool), rollback_ref, increment.prompt_version
   - version == the nearest tag `<id>/vX.Y.Z` reachable from HEAD, and when the
     commit at HEAD changed `version`, that tag must sit on HEAD itself.
 Exit 1 with one line per failure. Nothing is written.
@@ -25,6 +25,10 @@ SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 FLAG_NAME = re.compile(r"^[a-z0-9_]{3,32}$")
 METRICS = ("win_rate", "fail_per_session", "session_len_s", "rage_quit_rate", "thumbs_up_rate")
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
+# support: optional links the game shows as a door out (Ko-fi today). A key that is
+# present but empty renders nothing -- the same "muted until set" rule the Door page
+# uses -- so a manifest can ship the slot long before the page behind it exists.
+SUPPORT_LINKS = {"kofi": re.compile(r"^https://ko-fi\.com/[A-Za-z0-9_-]+/?$")}
 
 
 def manifests(root: Path | None = None) -> list[Path]:
@@ -52,6 +56,18 @@ def shape_errors(m: dict, folder: str) -> list[str]:
         e.append("telemetry.endpoint must be '' or https://<host>/v1/events (the ingest Worker)")
     elif t.get("endpoint") and not (1 <= t["batch"] <= 50):
         e.append("telemetry.batch must be 1..50 when an endpoint is set (the Worker takes 50 per POST)")
+    s = m.get("support")
+    if s is not None:
+        if not isinstance(s, dict):
+            e.append("support must be an object (may be omitted)")
+        else:
+            for name, url in s.items():
+                if name not in SUPPORT_LINKS:
+                    e.append(f"support.{name}: unknown link (known: {', '.join(sorted(SUPPORT_LINKS))})")
+                elif not isinstance(url, str):
+                    e.append(f"support.{name}: must be a string (empty = the door is hidden)")
+                elif url and not SUPPORT_LINKS[name].match(url):
+                    e.append(f"support.{name}: must be '' or a {name} page URL")
     h = m.get("health") or {}
     if not isinstance(h, dict) or not (h.get("url") or h.get("hub_tool")):
         e.append("health needs url (deployed spoke.json) or hub_tool (a hub-side read check)")

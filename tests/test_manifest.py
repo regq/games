@@ -38,11 +38,46 @@ def test_the_real_manifests_pass_the_shape_rules():
     ({"flags": {"wide_l3": {**GOOD["flags"]["wide_l3"], "metric": "fun"}}}, "metric must be"),
     ({"flags": {"wide_l3": {**GOOD["flags"]["wide_l3"], "baseline": 0.4}}}, "no baseline key"),
     ({"flags": {"wide_l3": {**GOOD["flags"]["wide_l3"], "expect": 0}}}, "positive lift"),
+    ({"support": "https://ko-fi.com/x"}, "support must be an object"),
+    ({"support": {"patreon": "https://patreon.com/x"}}, "unknown link"),
+    ({"support": {"kofi": 12}}, "must be a string"),
+    ({"support": {"kofi": "http://ko-fi.com/x"}}, "must be '' or a kofi page URL"),
+    ({"support": {"kofi": "https://ko-fi.example.com/x"}}, "must be '' or a kofi page URL"),
 ])
 def test_shape_rules_name_the_fault(patch, needle):
     m = {**GOOD, **patch}
     errs = cm.shape_errors(m, "game-01")
     assert errs and any(needle in e for e in errs)
+
+
+@pytest.mark.parametrize("support", [None, {}, {"kofi": ""}, {"kofi": "https://ko-fi.com/raudyr"}, {"kofi": "https://ko-fi.com/raudyr/"}])
+def test_support_is_optional_and_may_be_empty(support):
+    m = {**GOOD} if support is None else {**GOOD, "support": support}
+    assert cm.shape_errors(m, "game-01") == []
+
+
+def test_the_client_shows_a_support_door_only_for_a_real_kofi_url():
+    """supportUrl() in game.js is the one gate: anything that is not a Ko-fi page
+    URL renders nothing, so a half-filled manifest cannot ship a dead link."""
+    if shutil.which("node") is None:
+        pytest.skip("node not on PATH")
+    cases = {
+        "https://ko-fi.com/raudyr": "https://ko-fi.com/raudyr",
+        "https://ko-fi.com/raudyr/": "https://ko-fi.com/raudyr/",
+        "": "", "   ": "",
+        "http://ko-fi.com/raudyr": "",
+        "https://ko-fi.com.evil.example/raudyr": "",
+        "javascript:alert(1)": "",
+    }
+    script = ("const g=require(process.argv[1]);const c=JSON.parse(process.argv[2]);"
+              "console.log(JSON.stringify(Object.keys(c).map(u=>g.supportUrl({support:{kofi:u}}))))")
+    r = subprocess.run(["node", "-e", script, str(ROOT / "game-01" / "game.js"), json.dumps(cases)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == list(cases.values())
+    empty = subprocess.run(["node", "-e", "const g=require(process.argv[1]);console.log(JSON.stringify([g.supportUrl({}), g.supportUrl({support:{}}), g.supportUrl(null)]))",
+                            str(ROOT / "game-01" / "game.js")], capture_output=True, text=True)
+    assert empty.returncode == 0, empty.stderr
+    assert json.loads(empty.stdout) == ["", "", ""]
 
 
 def _git(repo: Path, *args: str) -> str:
