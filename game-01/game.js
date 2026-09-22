@@ -11,7 +11,10 @@
   const T = await Telemetry.init(manifest);
 
   const levels = content.levels;
-  let li = 0, attempt = 0, fill = 0, filling = false, raf = 0, last = 0, lastPress = 0, done = false;
+  let li = 0, attempt = 0, fill = 0, filling = false, raf = 0, startedAt = 0, lastPress = 0, done = false;
+  // fill is a function of wall-clock hold time, never of frames: a throttled or
+  // hidden tab must not change how much the gauge filled (found 09-21 in a background tab)
+  const held = () => Math.min(1, (performance.now() - startedAt) / 1000 * level().fill_per_s);
 
   function level() { return levels[li]; }
   function band() {
@@ -30,19 +33,19 @@
 
   function start() {
     if (done || filling) return;
-    filling = true; fill = 0; last = performance.now();
+    filling = true; fill = 0; startedAt = performance.now();
     $("fill").classList.remove("bad");
     raf = requestAnimationFrame(tick);
   }
-  function tick(now) {
+  function tick() {
     if (!filling) return;
-    fill = Math.min(1, fill + (now - last) / 1000 * level().fill_per_s);
-    last = now; draw();
+    fill = held(); draw();
     if (fill >= 1) stop(); else raf = requestAnimationFrame(tick);
   }
   function stop() {
     if (!filling) return;
     filling = false; cancelAnimationFrame(raf);
+    fill = held(); draw();
     const [lo, hi] = band();
     attempt += 1;
     if (fill >= lo && fill <= hi) {
