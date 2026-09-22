@@ -1,0 +1,12 @@
+{
+  "id": "game-01",
+  "kind": "game",
+  "version": "0.1.1",
+  "repo": "regq/games",
+  "url": "https://regq.github.io/games/game-01/",
+  "telemetry": { "endpoint": "", "batch": 20, "flush_s": 15 },
+  "flags": {},
+  "health": { "url": "https://regq.github.io/games/game-01/spoke.json" },
+  "rollback_ref": "game-01/v0.1.0",
+  "increment": { "prompt_version": "1", "weekday": "mon" }
+}
