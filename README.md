@@ -16,7 +16,7 @@ promotes or kills them on the canary's numbers.
 |---|---|
 | `shared/telemetry.js` | the one telemetry client every game loads (no dependencies) |
 | `<game>/spoke.json` | the manifest: id, version (= git tag `<game>/vX.Y.Z`), flags, health, rollback ref |
-| `<game>/index.html`, `game.js`, `levels.json` | the game; content is JSON, engine is tagged code |
+| `<game>/index.html`, `game.js`, `levels.json` | the game; content is JSON, engine is tagged code. `levels.json` also holds `variants` `{ "<flag>": { "<level n>": { overrides } } }`: a player whose active flags include the flag plays that level with the overrides merged in, so a numbers-only increment ships as content behind its flag |
 | `<game>/KILLED.md` | increments the canary reverted (written by the hub, never by hand) |
 | `tools/check_manifest.py` | CI gate: every manifest well-formed and `version == nearest tag` |
 | `docs/adr/` | decisions |

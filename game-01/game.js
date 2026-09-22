@@ -2,8 +2,25 @@
  * gauge; release inside the target band to win the level. Three levels, the
  * band shrinks and the fill speeds up (levels.json = content, this file = engine).
  * Telemetry: primitives only, through ../shared/telemetry.js (ADR-001).
+ *
+ * Flag-conditioned content (issue #5b): levels.json carries `variants`
+ * { "<flag>": { "<level n>": { overrides } } }. A player whose active flags
+ * (bucketed by user_hash in telemetry.js, sent on every event as ctx.f) include
+ * the flag plays that level with the overrides merged over the base row. An
+ * increment that only changes numbers ships as a variant plus a flag in
+ * spoke.json -- no engine change, no new tag needed for the content itself.
  */
-(async function () {
+function applyVariants(base, variants, flags) {
+  let out = base;
+  for (const flag of flags || []) {
+    const v = variants && variants[flag] && variants[flag][String(base.n)];
+    if (v) out = Object.assign({}, out, v);
+  }
+  return out;
+}
+if (typeof module === "object" && module.exports) module.exports = { applyVariants };
+
+if (typeof document !== "undefined") (async function () {
   "use strict";
   const $ = id => document.getElementById(id);
   const manifest = await (await fetch("spoke.json")).json();
@@ -11,17 +28,16 @@
   const T = await Telemetry.init(manifest);
 
   const levels = content.levels;
+  const variants = content.variants || {};
   let li = 0, attempt = 0, fill = 0, filling = false, raf = 0, startedAt = 0, lastPress = 0, done = false;
   // fill is a function of wall-clock hold time, never of frames: a throttled or
   // hidden tab must not change how much the gauge filled (found 09-21 in a background tab)
   const held = () => Math.min(1, (performance.now() - startedAt) / 1000 * level().fill_per_s);
 
-  function level() { return levels[li]; }
+  function level() { return applyVariants(levels[li], variants, T.flags()); }
   function band() {
     const L = level();
-    let w = L.band_width;
-    if (li === 2 && T.flagOn("wide_l3")) w *= 1.5;          // an example flag the hub can canary; off until spoke.json says otherwise
-    return [L.band_center - w / 2, L.band_center + w / 2];
+    return [L.band_center - L.band_width / 2, L.band_center + L.band_width / 2];
   }
   function draw() {
     const [lo, hi] = band();
