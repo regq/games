@@ -103,7 +103,7 @@ if (typeof document !== "undefined") (async function () {
   // dev overlay: ?dev=1
   function refreshDev() {
     if (!T.dev) return;
-    $("count").textContent = String(T.count());
+    $("count").textContent = String(T.count()) + (T.unsent() ? " · unsent " + T.unsent() : "");
     $("uid").textContent = T.userHash;
   }
   if (T.dev) {

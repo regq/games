@@ -36,8 +36,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Stage the site (each game folder + shared only; tools, tests, docs and CI never publish)
+        run: |
+          rm -rf _site && mkdir -p _site/shared
+          cp -r shared/. _site/shared/
+          for m in */spoke.json; do d=$(dirname "$m"); mkdir -p "_site/$d"; cp -r "$d/." "_site/$d/"; done
+          find _site -type d -name __pycache__ -prune -exec rm -rf {} +
+          ls -R _site | head -40
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

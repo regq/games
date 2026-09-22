@@ -34,9 +34,12 @@ python -m pytest -q tests
 python tools/check_manifest.py
 ```
 
-Open a game with `?dev=1` for the dev overlay: event count, **Export** (the
-events as JSONL, also copied into the box), **Reset player**. The export is
-what the hub imports.
+Open a game with `?dev=1` for the dev overlay: event count (and, when an
+endpoint is set, how many are still unsent), **Export** (the events as JSONL,
+also copied into the box), **Reset player**. With `telemetry.endpoint` empty
+the export is what the hub imports (Route B); with it set the client also
+sends batches to the ingest endpoint and the hub pulls them nightly (Route A),
+and the export stays as the fallback.
 
 ## Release
 
@@ -49,7 +52,11 @@ CI refuses a manifest whose `version` is not the nearest `<game>/v*` tag.
 
 ## Privacy
 
-No accounts, no cookies, no IP or user-agent logging. The only identifier is a
-hash of a random id kept in your browser's localStorage; clearing it makes you
-a new player. Events are anonymous play statistics (level won or failed,
-session length, a thumbs vote, a problem report you type).
+No accounts, no cookies, no user-agent logging, and nothing stored about your
+connection. The only identifier is a hash of a random id kept in your
+browser's localStorage; clearing it makes you a new player. Events are
+anonymous play statistics (level won or failed, session length, a thumbs
+vote, a problem report you type). When a game sends events to its ingest
+endpoint, the edge network that hosts it sees your IP address to deliver the
+request, as any website does; the endpoint keeps none of it, and rate limits
+are counted, never logged per person.

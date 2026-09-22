@@ -48,6 +48,10 @@ def shape_errors(m: dict, folder: str) -> list[str]:
     t = m.get("telemetry") or {}
     if not isinstance(t, dict) or "endpoint" not in t or not isinstance(t.get("batch"), int) or not isinstance(t.get("flush_s"), (int, float)):
         e.append("telemetry needs endpoint (may be ''), batch (int), flush_s (number)")
+    elif t.get("endpoint") and not re.match(r"^https://[^/\s]+/v1/events$", str(t["endpoint"])):
+        e.append("telemetry.endpoint must be '' or https://<host>/v1/events (the ingest Worker)")
+    elif t.get("endpoint") and not (1 <= t["batch"] <= 50):
+        e.append("telemetry.batch must be 1..50 when an endpoint is set (the Worker takes 50 per POST)")
     h = m.get("health") or {}
     if not isinstance(h, dict) or not (h.get("url") or h.get("hub_tool")):
         e.append("health needs url (deployed spoke.json) or hub_tool (a hub-side read check)")
