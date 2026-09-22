@@ -2,8 +2,7 @@ name: Check manifests and deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
-    tags: ["*/v*"]
+    branches: [main]      # tags are not a trigger: a pushed old tag would check out and deploy an old tree (seen 2026-09-22)
   workflow_dispatch:
 
 permissions:
