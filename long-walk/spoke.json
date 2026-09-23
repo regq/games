@@ -1,12 +1,30 @@
 {
   "id": "long-walk",
   "kind": "game",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repo": "regq/games",
   "url": "https://regq.github.io/games/long-walk/",
-  "telemetry": { "endpoint": "", "batch": 20, "flush_s": 15 },
+  "telemetry": { "endpoint": "https://spoke-ingest.regq.workers.dev/v1/events", "batch": 20, "flush_s": 15 },
   "support": { "kofi": "https://ko-fi.com/raudyr" },
-  "flags": {},
+  "flags": {
+    "telegraph_3s": {
+      "rollout": 0,
+      "since": "2026-09-23T00:00:00Z",
+      "window_h": 72,
+      "metric": "fail_per_session@L1",
+      "expect": 0.15,
+      "issue": 1
+    },
+    "pass_hazard_12": {
+      "rollout": 0,
+      "since": "2026-09-23T00:00:00Z",
+      "window_h": 72,
+      "metric": "level_win_rate@L3",
+      "target": 0.12,
+      "tolerance": 0.05,
+      "issue": 1
+    }
+  },
   "health": { "url": "https://regq.github.io/games/long-walk/spoke.json" },
   "rollback_ref": "long-walk/v0.1.0",
   "increment": { "prompt_version": "1", "weekday": "mon" }

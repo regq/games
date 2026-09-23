@@ -23,7 +23,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 FLAG_NAME = re.compile(r"^[a-z0-9_]{3,32}$")
-METRICS = ("win_rate", "fail_per_session", "session_len_s", "rage_quit_rate", "thumbs_up_rate")
+METRICS = ("win_rate", "fail_per_session", "session_len_s", "rage_quit_rate", "thumbs_up_rate", "level_win_rate")
+LEVEL_ONLY_METRICS = ("level_win_rate",)          # meaningless without a level to measure at
+METRIC_AT = re.compile(r"^([a-z_]+)(?:@L(\d+))?$")
+
+
+def split_metric(raw: object) -> tuple[str, int | None]:
+    """`fail_per_session@L1` -> ('fail_per_session', 1); `win_rate` -> ('win_rate', None).
+
+    The `@L<n>` qualifier (2026-09-23) scopes a metric to one level, which is what makes a
+    target like "12% of runs reach L3" expressible at all -- a whole-session win rate cannot
+    say anything about one segment."""
+    m = METRIC_AT.match(str(raw or "").strip())
+    if not m:
+        return str(raw or ""), None
+    return m.group(1), (int(m.group(2)) if m.group(2) else None)
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
 # support: optional links the game shows as a door out (Ko-fi today). A key that is
 # present but empty renders nothing -- the same "muted until set" rule the Door page
@@ -90,10 +104,24 @@ def shape_errors(m: dict, folder: str) -> list[str]:
                 e.append(f"flag {name!r}: since (ISO 8601) missing")
             if not isinstance(f.get("window_h"), int) or f["window_h"] <= 0:
                 e.append(f"flag {name!r}: window_h must be a positive int")
-            if f.get("metric") not in METRICS:
-                e.append(f"flag {name!r}: metric must be one of {', '.join(METRICS)}")
-            if not isinstance(f.get("expect"), (int, float)) or f["expect"] <= 0:
-                e.append(f"flag {name!r}: expect must be a positive lift")
+            metric, level = split_metric(f.get("metric"))
+            if metric not in METRICS or (metric in LEVEL_ONLY_METRICS and level is None):
+                e.append(f"flag {name!r}: metric must be one of {', '.join(METRICS)}"
+                         + (f" ({', '.join(LEVEL_ONLY_METRICS)} only with @L<n>)" if metric in LEVEL_ONLY_METRICS else ""))
+            elif level is not None and level < 1:
+                e.append(f"flag {name!r}: @L<n> must be a level number from 1")
+            targeted = "target" in f or "tolerance" in f
+            if targeted:
+                if level is None:
+                    e.append(f"flag {name!r}: the target form needs a level: metric <m>@L<n> target <v> tolerance <t>")
+                if not isinstance(f.get("target"), (int, float)):
+                    e.append(f"flag {name!r}: target must be a number")
+                if not isinstance(f.get("tolerance"), (int, float)) or f["tolerance"] <= 0:
+                    e.append(f"flag {name!r}: tolerance must be positive")
+                if "expect" in f:
+                    e.append(f"flag {name!r}: a flag is either the lift form (expect) or the target form (target + tolerance), never both")
+            elif not isinstance(f.get("expect"), (int, float)) or f["expect"] <= 0:
+                e.append(f"flag {name!r}: expect must be a positive lift (or use the target form: target + tolerance)")
             if "baseline" in f:
                 e.append(f"flag {name!r}: no baseline key -- canary vs control only (ADR-001 amendment 1)")
     return e

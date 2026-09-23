@@ -4,47 +4,100 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Long Walk</title>
-<meta name="description" content="long-walk: you walk, it only gets further. Scaffold — not playable yet.">
-<meta name="robots" content="noindex">
+<meta name="description" content="You walk. It does not end, it only gets further. Hold to sprint — a hazard while sprinting ends the run.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="The Long Walk">
+<meta property="og:description" content="Hold to sprint. Let go to walk. The walk is endless; runs are not.">
+<meta property="og:url" content="https://regq.github.io/games/long-walk/">
+<meta name="twitter:card" content="summary">
 <style>
-  /* Every colour the game draws with is a --skin-* slot, written by skin.js from
-     skin.json. The values here are only the fallback for a refused or missing skin. */
+  /* Every colour the game draws with is a --skin-* slot, written by skin.js from skin.json.
+     The values here are the fallback for a refused or missing skin, and nothing else in the
+     page or the engine hard-codes a colour. */
   :root {
     --skin-bg: #14100c; --skin-ink: #f1e6d3; --skin-dim: #a8977f;
     --skin-far: #2a2119; --skin-mid: #3a2d23; --skin-near: #57432f;
     --skin-walker: #d9a441; --skin-hazard: #c8472b; --skin-telegraph: #d9a441; --skin-checkpoint: #5f9c5f;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--skin-bg); color: var(--skin-ink); font: 16px/1.5 system-ui, sans-serif;
+  body { margin: 0; background: var(--skin-bg); color: var(--skin-ink); font: 16px/1.45 system-ui, sans-serif;
          min-height: 100svh; display: grid; place-items: center; padding: 16px; }
-  main { width: min(420px, 100%); display: grid; gap: 14px; }
-  h1 { font-size: 1.3rem; margin: 0; }
+  main { width: min(420px, 100%); display: grid; gap: 12px; }
+  h1 { font-size: 1.25rem; margin: 0; }
   p { margin: 0; }
   .dim { color: var(--skin-dim); }
-  .road { height: 120px; border: 2px solid var(--skin-mid); border-radius: 12px; position: relative; overflow: hidden;
-          background: linear-gradient(var(--skin-far), var(--skin-mid) 60%, var(--skin-near)); }
-  .walker { position: absolute; left: 18px; bottom: 14px; width: 14px; height: 26px; border-radius: 3px; background: var(--skin-walker); }
-  .flag { position: absolute; bottom: 14px; width: 3px; height: 30px; background: var(--skin-checkpoint); }
-  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--skin-mid); }
-  th { color: var(--skin-dim); font-weight: 600; }
-  code { color: var(--skin-walker); }
-  .status { min-height: 1.5em; }
+  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .bar { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+  .big { font-size: 2rem; font-weight: 700; line-height: 1; }
+
+  .road { position: relative; height: 180px; border: 2px solid var(--skin-mid); border-radius: 12px;
+          overflow: hidden; background: var(--skin-far); transition: box-shadow .12s, border-color .12s; }
+  .band { position: absolute; left: 0; bottom: 0; width: 200%; height: 100%;
+          background-repeat: repeat-x; background-size: 200px 100%; will-change: transform; }
+  #far  { background-image: repeating-linear-gradient(90deg, var(--skin-far) 0 60px, var(--skin-mid) 60px 64px); opacity: .5; height: 55%; }
+  #mid  { background-image: repeating-linear-gradient(90deg, transparent 0 120px, var(--skin-mid) 120px 128px); height: 70%; opacity: .8; }
+  #near { background-image: repeating-linear-gradient(90deg, transparent 0 40px, var(--skin-near) 40px 46px); height: 26%; }
+  .walker { position: absolute; left: 34px; bottom: 16px; width: 14px; height: 30px; border-radius: 3px;
+            background: var(--skin-walker); transform: rotate(var(--lean, 0deg)); transform-origin: bottom center;
+            transition: transform .12s; }
+  .road.telegraph { border-color: var(--skin-telegraph); box-shadow: inset 0 0 0 3px var(--skin-telegraph); }
+  /* a flash, not a state: a rim and a wash you can see at a glance without losing the road */
+  .road.flash { border-color: var(--skin-hazard); box-shadow: inset 0 0 0 4px var(--skin-hazard); }
+  .road.flash::after { content: ""; position: absolute; inset: 0; background: var(--skin-hazard); opacity: .35; }
+  .road.sprint #near { animation: none; }
+
+  button { font: inherit; padding: 10px 14px; border-radius: 10px; border: 2px solid var(--skin-mid);
+           background: var(--skin-far); color: var(--skin-ink); cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.big-btn { font-size: 1.1rem; padding: 18px; width: 100%; touch-action: none; user-select: none; }
+  #bank { border-color: var(--skin-checkpoint); color: var(--skin-checkpoint); width: 100%; }
+  .hidden { display: none; }
+  .tip { margin: 0; color: var(--skin-dim); font-size: .95rem; }
+  .tip a { color: var(--skin-walker); }
+  .dev { display: none; text-align: left; font-size: .85rem; border-top: 1px dashed var(--skin-mid); padding-top: 10px; }
+  .dev.on { display: block; }
+  textarea { width: 100%; height: 110px; font: 12px/1.3 ui-monospace, monospace; background: var(--skin-far);
+             color: var(--skin-ink); border: 1px solid var(--skin-mid); }
 </style>
 </head>
 <body>
 <main>
   <h1>The Long Walk</h1>
-  <p class="dim">Scaffold, v0.1.0. <strong>Not playable yet</strong> — the walk itself is the next build.
-     This page exists so the spoke is registered, deployed and health-checked before any of it is written.</p>
-  <div class="road" aria-hidden="true">
-    <div class="walker"></div>
-    <div class="flag" id="f1"></div><div class="flag" id="f2"></div><div class="flag" id="f3"></div>
+  <div class="bar"><span class="big" id="dist">0 m</span><span class="dim" id="best">no run yet</span></div>
+  <div class="road" id="road" aria-hidden="true">
+    <div class="band" id="far"></div><div class="band" id="mid"></div><div class="band" id="near"></div>
+    <div class="walker" id="walker"></div>
   </div>
-  <p class="status dim" id="status" role="status" aria-live="polite">loading…</p>
-  <table id="segments"><thead><tr><th>#</th><th>ends at</th><th>hazard/10 m</th><th>walk</th><th>telegraph</th></tr></thead>
-    <tbody id="rows"></tbody></table>
-  <p class="dim" id="skin"></p>
+  <div class="bar dim"><span id="seg">segment 1 of 3</span><span id="hand">no tokens in hand</span></div>
+  <p class="dim" id="status" role="status" aria-live="polite">loading…</p>
+  <button class="big-btn" id="hold" aria-label="Hold to sprint; let go to walk">Hold to sprint</button>
+  <button id="bank" class="hidden">Bank and end the run</button>
+
+  <div class="hidden" id="after">
+    <p id="outcome"></p>
+    <div class="row" style="margin-top:10px">
+      <button id="up" aria-label="Thumbs up">👍 Liked it</button>
+      <button id="down" aria-label="Thumbs down">👎 Not for me</button>
+      <button id="again">Walk again</button>
+    </div>
+    <p class="tip hidden" id="tip" style="margin-top:10px">
+      A personal best. Made by one person, free, no ads.
+      <a id="tip-link" href="#" rel="noopener external" target="_blank">Buy me a coffee ☕</a>
+    </p>
+  </div>
+
+  <div class="bar"><span class="dim" id="tokens">0 tokens</span></div>
+  <div class="row">
+    <button id="boots" aria-label="Buy boots: faster walk">Boots 0/2 · 3</button>
+    <button id="pack" aria-label="Buy pack: fewer hazards">Pack 0/2 · 5</button>
+    <button id="report" aria-label="Report a problem">Report a problem</button>
+  </div>
+
+  <section class="dev" id="dev" aria-label="Developer overlay">
+    <div>dev overlay · events stored: <span id="count">0</span> · player <code id="uid"></code></div>
+    <div class="row"><button id="export">Export</button><button id="reset">Reset player</button></div>
+    <textarea id="jsonl" aria-label="Exported events (JSONL)" readonly></textarea>
+  </section>
 </main>
 <script src="../shared/telemetry.js"></script>
 <script src="../shared/skin.js"></script>
