@@ -1,0 +1,18 @@
+{
+  "name": "default",
+  "engine": ">=0.1.0",
+  "palette": {
+    "bg": "#14100c",
+    "ink": "#f1e6d3",
+    "dim": "#a8977f",
+    "far": "#2a2119",
+    "mid": "#3a2d23",
+    "near": "#57432f",
+    "walker": "#d9a441",
+    "hazard": "#c8472b",
+    "telegraph": "#d9a441",
+    "checkpoint": "#5f9c5f"
+  },
+  "sprites": {},
+  "sfx": {}
+}

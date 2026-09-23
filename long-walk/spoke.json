@@ -1,0 +1,13 @@
+{
+  "id": "long-walk",
+  "kind": "game",
+  "version": "0.1.0",
+  "repo": "regq/games",
+  "url": "https://regq.github.io/games/long-walk/",
+  "telemetry": { "endpoint": "", "batch": 20, "flush_s": 15 },
+  "support": { "kofi": "https://ko-fi.com/raudyr" },
+  "flags": {},
+  "health": { "url": "https://regq.github.io/games/long-walk/spoke.json" },
+  "rollback_ref": "long-walk/v0.1.0",
+  "increment": { "prompt_version": "1", "weekday": "mon" }
+}

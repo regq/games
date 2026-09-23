@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Long Walk</title>
+<meta name="description" content="long-walk: you walk, it only gets further. Scaffold — not playable yet.">
+<meta name="robots" content="noindex">
+<style>
+  /* Every colour the game draws with is a --skin-* slot, written by skin.js from
+     skin.json. The values here are only the fallback for a refused or missing skin. */
+  :root {
+    --skin-bg: #14100c; --skin-ink: #f1e6d3; --skin-dim: #a8977f;
+    --skin-far: #2a2119; --skin-mid: #3a2d23; --skin-near: #57432f;
+    --skin-walker: #d9a441; --skin-hazard: #c8472b; --skin-telegraph: #d9a441; --skin-checkpoint: #5f9c5f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--skin-bg); color: var(--skin-ink); font: 16px/1.5 system-ui, sans-serif;
+         min-height: 100svh; display: grid; place-items: center; padding: 16px; }
+  main { width: min(420px, 100%); display: grid; gap: 14px; }
+  h1 { font-size: 1.3rem; margin: 0; }
+  p { margin: 0; }
+  .dim { color: var(--skin-dim); }
+  .road { height: 120px; border: 2px solid var(--skin-mid); border-radius: 12px; position: relative; overflow: hidden;
+          background: linear-gradient(var(--skin-far), var(--skin-mid) 60%, var(--skin-near)); }
+  .walker { position: absolute; left: 18px; bottom: 14px; width: 14px; height: 26px; border-radius: 3px; background: var(--skin-walker); }
+  .flag { position: absolute; bottom: 14px; width: 3px; height: 30px; background: var(--skin-checkpoint); }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--skin-mid); }
+  th { color: var(--skin-dim); font-weight: 600; }
+  code { color: var(--skin-walker); }
+  .status { min-height: 1.5em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>The Long Walk</h1>
+  <p class="dim">Scaffold, v0.1.0. <strong>Not playable yet</strong> — the walk itself is the next build.
+     This page exists so the spoke is registered, deployed and health-checked before any of it is written.</p>
+  <div class="road" aria-hidden="true">
+    <div class="walker"></div>
+    <div class="flag" id="f1"></div><div class="flag" id="f2"></div><div class="flag" id="f3"></div>
+  </div>
+  <p class="status dim" id="status" role="status" aria-live="polite">loading…</p>
+  <table id="segments"><thead><tr><th>#</th><th>ends at</th><th>hazard/10 m</th><th>walk</th><th>telegraph</th></tr></thead>
+    <tbody id="rows"></tbody></table>
+  <p class="dim" id="skin"></p>
+</main>
+<script src="../shared/telemetry.js"></script>
+<script src="../shared/skin.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

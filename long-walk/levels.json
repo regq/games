@@ -1,0 +1,21 @@
+{
+  "levels": [
+    { "n": 1, "ends_at_m": 400, "hazard_per_10m": 0.02, "walk_m_s": 1.20, "telegraph_s": 2.0 },
+    { "n": 2, "ends_at_m": 1200, "hazard_per_10m": 0.05, "walk_m_s": 1.20, "telegraph_s": 2.0 },
+    { "n": 3, "ends_at_m": 2400, "hazard_per_10m": 0.09, "walk_m_s": 1.35, "telegraph_s": 2.0 }
+  ],
+  "variants": {
+    "telegraph_3s": { "1": { "telegraph_s": 3.0 }, "2": { "telegraph_s": 3.0 }, "3": { "telegraph_s": 3.0 } },
+    "pass_hazard_12": { "3": { "hazard_per_10m": 0.12 } }
+  },
+  "meta": {
+    "sprint_multiplier": 2.0,
+    "token_per_checkpoint": 1,
+    "boots_speed_step": 0.10,
+    "boots_cost_tokens": 3,
+    "boots_max_stacks": 2,
+    "pack_hazard_step": 0.20,
+    "pack_cost_tokens": 5,
+    "pack_max_stacks": 2
+  }
+}

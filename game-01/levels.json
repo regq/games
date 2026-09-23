@@ -1,5 +1,4 @@
 {
-  "engine": ">=0.1.2",
   "levels": [
     { "n": 1, "band_center": 0.60, "band_width": 0.30, "fill_per_s": 0.50 },
     { "n": 2, "band_center": 0.45, "band_width": 0.18, "fill_per_s": 0.65 },
