@@ -50,6 +50,14 @@ git tag game-01/v0.1.1 && git push --tags && git push
 
 CI refuses a manifest whose `version` is not the nearest `<game>/v*` tag.
 
+**Bump the version in the release commit, never before it.** A bumped `version`
+sitting untagged in the working tree is a version that was never released: CI
+goes red on the next push, and the hub — which health-checks the deployed page
+against the released tag (ADR-001 D8) — sees a spoke it cannot match. Until
+2026-09-22 the hub compared against the working tree instead and raised a
+rollback card for a game that was perfectly healthy. Both halves are fixed;
+the habit is still the cheap way to never meet either one.
+
 ## Privacy
 
 No accounts, no cookies, no user-agent logging, and nothing stored about your
