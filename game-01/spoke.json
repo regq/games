@@ -1,13 +1,13 @@
 {
   "id": "game-01",
   "kind": "game",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "repo": "regq/games",
   "url": "https://regq.github.io/games/game-01/",
   "telemetry": { "endpoint": "https://spoke-ingest.regq.workers.dev/v1/events", "batch": 20, "flush_s": 15 },
-  "support": { "kofi": "" },
+  "support": { "kofi": "https://ko-fi.com/raudyr" },
   "flags": {},
   "health": { "url": "https://regq.github.io/games/game-01/spoke.json" },
-  "rollback_ref": "game-01/v0.2.0",
+  "rollback_ref": "game-01/v0.2.1",
   "increment": { "prompt_version": "1", "weekday": "mon" }
 }
