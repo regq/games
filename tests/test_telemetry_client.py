@@ -50,3 +50,49 @@ def test_manifest_endpoint_rule():
     too_big = {**GOOD, "telemetry": {"endpoint": "https://x.workers.dev/v1/events", "batch": 80, "flush_s": 15}}
     assert any("batch must be 1..50" in e for e in cm.shape_errors(too_big, "game-01"))
     assert cm.shape_errors(GOOD, "game-01") == []                         # '' stays legal (Route B)
+
+
+# --- L1: one origin, one list per spoke ---------------------------------------------
+
+STORE = ("const s={v:{},getItem(k){return k in this.v?this.v[k]:null},"
+         "setItem(k,x){this.v[k]=x},removeItem(k){delete this.v[k]}};global.window={localStorage:s};")
+
+
+def test_events_and_outbox_are_keyed_per_spoke_and_the_uid_is_not():
+    """localStorage is per ORIGIN: all three spokes live on regq.github.io and shared one
+    list until 2026-09-23. The identity stays shared on purpose -- one person, one user."""
+    out = _node("const T=require(process.argv[1]);"
+                "console.log(JSON.stringify([T.eventsKeyFor('door'),T.outboxKeyFor('long-walk')]));")
+    assert out == ["spoke:events:door", "spoke:outbox:long-walk"]
+
+
+def test_the_migration_partitions_old_rows_by_their_own_spoke_field():
+    out = _node(STORE + "const T=require(process.argv[1]);"
+                "s.v['spoke:events']=JSON.stringify([{spoke:'game-01',e:1},{spoke:'door',e:2},{e:3},{spoke:'  ',e:4},{spoke:'game-01',e:5}]);"
+                "s.v['spoke:outbox']=JSON.stringify([{spoke:'door',e:6}]);"
+                "const first=T.migrate();const second=T.migrate();"
+                "console.log(JSON.stringify({first,second,keys:Object.keys(s.v).sort(),"
+                "  g:s.v['spoke:events:game-01'],d:s.v['spoke:outbox:door'],old:s.v['spoke:events']||null}));")
+    assert out["first"] == {"moved": 4, "spokes": ["door", "game-01"]}
+    assert out["second"] == {"moved": 0, "spokes": []}                    # idempotent
+    assert out["old"] is None                                             # the shared lists are gone
+    assert out["keys"] == ["spoke:events:door", "spoke:events:game-01", "spoke:outbox:door"]
+    assert [r["e"] for r in json.loads(out["g"])] == [1, 5]               # each spoke keeps its own
+    assert [r["e"] for r in json.loads(out["d"])] == [6]
+    assert "spoke:uid" not in out["keys"]                                 # identity untouched
+
+
+def test_a_row_that_cannot_be_attributed_is_dropped_not_guessed():
+    out = _node("const T=require(process.argv[1]);"
+                "console.log(JSON.stringify([T.partitionBySpoke(JSON.stringify([{e:1},{spoke:'',e:2},{spoke:'a',e:3}])),"
+                " T.partitionBySpoke('not json'), T.partitionBySpoke('{}'), T.partitionBySpoke('')]));")
+    assert out[0] == {"a": [{"spoke": "a", "e": 3}]}
+    assert out[1] == {} and out[2] == {} and out[3] == {}
+
+
+def test_migration_appends_and_never_drops_what_a_spoke_already_had():
+    out = _node(STORE + "const T=require(process.argv[1]);"
+                "s.v['spoke:events:door']=JSON.stringify([{spoke:'door',e:0}]);"
+                "s.v['spoke:events']=JSON.stringify([{spoke:'door',e:1}]);"
+                "T.migrate();console.log(JSON.stringify(JSON.parse(s.v['spoke:events:door']).map(r=>r.e)));")
+    assert out == [0, 1]

@@ -32,7 +32,16 @@
   const EVENTS = ["session_start", "session_end", "level_fail", "level_win", "thumbs", "report", "purchase", "ugc_publish", "ugc_play"];
   const DERIVED = ["rage_quit"];
   const CAP = 2000, BATCH_MAX = 50, BACKOFF_MIN = 15, BACKOFF_MAX = 300;
-  const KEY_UID = "spoke:uid", KEY_EVENTS = "spoke:events", KEY_OUTBOX = "spoke:outbox", KEY_DEV = "spoke:dev";
+  // localStorage is per ORIGIN, not per path, so every spoke on regq.github.io shared one
+  // event list and one outbox until 2026-09-23. Attribution was never wrong -- each row
+  // carries its own `spoke` and the hub keys on that -- but Export dumped a mixed list and
+  // the 2000-row cap was shared, so a busy game could evict a quiet page's events.
+  // Events and outbox are now per spoke. `spoke:uid` stays SHARED on purpose: one person
+  // is one user across the spokes, and re-keying it would reset every player's identity.
+  const KEY_UID = "spoke:uid", KEY_DEV = "spoke:dev";
+  const OLD_EVENTS = "spoke:events", OLD_OUTBOX = "spoke:outbox";
+  function keyEvents(id) { return "spoke:events:" + id; }
+  function keyOutbox(id) { return "spoke:outbox:" + id; }
 
   function bucket(userHash) { return parseInt(String(userHash).slice(0, 4), 16) / 65535; }
   function flagOnFor(userHash, rollout) { return bucket(userHash) < Number(rollout || 0); }
@@ -66,16 +75,66 @@
   function readList(key) { try { return JSON.parse(store().getItem(key) || "[]"); } catch (e) { return []; } }
   function writeList(key, list) { try { store().setItem(key, JSON.stringify(list.slice(-CAP))); } catch (e) { /* storage blocked: events are lost, never the game */ } }
 
+  /** Partition the old shared lists into per-spoke ones, by each row's OWN `spoke` field,
+   *  then drop the originals. Runs once per browser, on the first load of any spoke after
+   *  the change; idempotent, because a missing old key is simply nothing to move. Rows are
+   *  APPENDED to whatever the per-spoke list already holds and never dropped for being
+   *  another spoke's -- an unsent event belongs to its spoke wherever it was queued. */
+  function migrate(partition) {
+    const s = store();
+    if (!s) return { moved: 0, spokes: [] };
+    let moved = 0;
+    const spokes = {};
+    for (const [oldKey, keyFor] of [[OLD_EVENTS, keyEvents], [OLD_OUTBOX, keyOutbox]]) {
+      let rows = null;
+      try { rows = s.getItem(oldKey); } catch (e) { rows = null; }
+      if (rows === null) continue;
+      const by = (partition || partitionBySpoke)(rows);
+      for (const id of Object.keys(by)) {
+        writeList(keyFor(id), readList(keyFor(id)).concat(by[id]));
+        moved += by[id].length;
+        spokes[id] = true;
+      }
+      try { s.removeItem(oldKey); } catch (e) { /* nothing else to do */ }
+    }
+    return { moved, spokes: Object.keys(spokes).sort() };
+  }
+
+  /** Pure, and exported for the tests: raw JSON text -> {spoke id: rows}. A row with no
+   *  usable `spoke` is dropped rather than guessed at -- it cannot be attributed, and
+   *  filing it under the spoke that happens to be loading would invent data. */
+  function partitionBySpoke(text) {
+    let rows;
+    try { rows = JSON.parse(text || "[]"); } catch (e) { return {}; }
+    if (!Array.isArray(rows)) return {};
+    const out = {};
+    for (const r of rows) {
+      const id = r && typeof r.spoke === "string" ? r.spoke.trim() : "";
+      if (!id) continue;
+      (out[id] = out[id] || []).push(r);
+    }
+    return out;
+  }
+
   const T = {
     EVENTS, DERIVED, CAP, BATCH_MAX, BACKOFF_MIN, BACKOFF_MAX, bucket, flagOnFor, takeBatch, ack, backoffNext, retryAfterSeconds,
-    manifest: null, userHash: null, session: null, dev: false,
+    migrate, partitionBySpoke, eventsKeyFor: keyEvents, outboxKeyFor: keyOutbox,
+    manifest: null, userHash: null, session: null, dev: false, test: false,
     _timer: null, _started: 0, _inflight: false, _backoff: 0, _nextTry: 0, _ended: false,
 
     endpoint() { return (this.manifest && this.manifest.telemetry && this.manifest.telemetry.endpoint) || ""; },
 
+    keyEvents() { return keyEvents(this.manifest.id); },
+    keyOutbox() { return keyOutbox(this.manifest.id); },
+
     async init(manifest) {
       this.manifest = manifest;
+      migrate();                                  // once per browser: split the old shared lists
       this.dev = /[?&]dev=1/.test(location.search) || (store() && store().getItem(KEY_DEV) === "1");
+      // ?test=1 marks every event `ctx.test`, and the hub drops those rows from PAIN,
+      // INCREMENT and the canary. It is how the people building this visit their own
+      // spokes without their visits becoming the evidence the loop reasons from.
+      this.test = /[?&]test=1/.test(location.search);
       let uid = store() && store().getItem(KEY_UID);
       if (!uid) { uid = uuid(); try { store().setItem(KEY_UID, uid); } catch (e) { /* no storage: per-load user */ } }
       this.userHash = await sha256hex16(uid);
@@ -104,12 +163,13 @@
         return null;
       }
       const c = Object.assign({ s: this.session, f: this.flags() }, ctx || {});
+      if (this.test) c.test = 1;                  // last word: a caller cannot un-mark a test visit
       const row = { spoke: this.manifest.id, version: this.manifest.version, user_hash: this.userHash, event: name,
                     value: value == null ? null : Number(value), ctx: c, ts: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") };
-      writeList(KEY_EVENTS, readList(KEY_EVENTS).concat([row]));
+      writeList(this.keyEvents(), readList(this.keyEvents()).concat([row]));
       if (this.endpoint()) {
-        const box = readList(KEY_OUTBOX).concat([row]);
-        writeList(KEY_OUTBOX, box);
+        const box = readList(this.keyOutbox()).concat([row]);
+        writeList(this.keyOutbox(), box);
         if (box.length >= (this.manifest.telemetry.batch || 20)) this.flush();
       }
       return row;
@@ -124,7 +184,8 @@
     flush(opts) {
       const ep = this.endpoint();
       if (!ep) return;
-      const box = readList(KEY_OUTBOX);
+      const outbox = this.keyOutbox();
+      const box = readList(outbox);
       if (!box.length) return;
       const batch = takeBatch(box, BATCH_MAX);
       const body = JSON.stringify(batch);
@@ -137,11 +198,11 @@
       const self = this;
       fetch(ep, { method: "POST", body, headers: { "Content-Type": "text/plain" }, keepalive: true }).then(res => {
         if (res.ok) {
-          writeList(KEY_OUTBOX, ack(readList(KEY_OUTBOX), batch));
+          writeList(outbox, ack(readList(outbox), batch));
           self._backoff = 0; self._nextTry = 0;
-          if (readList(KEY_OUTBOX).length >= BATCH_MAX) setTimeout(() => self.flush(), 0);
+          if (readList(outbox).length >= BATCH_MAX) setTimeout(() => self.flush(), 0);
         } else if (res.status === 400 || res.status === 413) {
-          writeList(KEY_OUTBOX, ack(readList(KEY_OUTBOX), batch));   // the batch itself is refused: never retried
+          writeList(outbox, ack(readList(outbox), batch));   // the batch itself is refused: never retried
           if (self.dev) throw new Error("telemetry batch refused: " + res.status);
         } else {
           self._backoff = backoffNext(self._backoff);
@@ -154,11 +215,13 @@
       }).finally(() => { self._inflight = false; });
     },
 
-    count() { return readList(KEY_EVENTS).length; },
-    unsent() { return this.endpoint() ? readList(KEY_OUTBOX).length : 0; },
-    exportJsonl() { const l = readList(KEY_EVENTS); return l.map(r => JSON.stringify(r)).join("\n") + (l.length ? "\n" : ""); },
-    clearEvents() { writeList(KEY_EVENTS, []); writeList(KEY_OUTBOX, []); },
-    resetPlayer() { try { store().removeItem(KEY_UID); store().removeItem(KEY_EVENTS); store().removeItem(KEY_OUTBOX); } catch (e) { /* ignore */ } },
+    count() { return readList(this.keyEvents()).length; },
+    unsent() { return this.endpoint() ? readList(this.keyOutbox()).length : 0; },
+    exportJsonl() { const l = readList(this.keyEvents()); return l.map(r => JSON.stringify(r)).join("\n") + (l.length ? "\n" : ""); },
+    clearEvents() { writeList(this.keyEvents(), []); writeList(this.keyOutbox(), []); },
+    // resetPlayer clears THIS spoke's rows and the shared identity. Another spoke's events
+    // are not this spoke's to throw away.
+    resetPlayer() { try { store().removeItem(KEY_UID); store().removeItem(this.keyEvents()); store().removeItem(this.keyOutbox()); } catch (e) { /* ignore */ } },
   };
   return T;
 }));
