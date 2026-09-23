@@ -23,6 +23,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 FLAG_NAME = re.compile(r"^[a-z0-9_]{3,32}$")
+# `page` (2026-09-23): a spoke that is a page, not a loop. Its levels are doors -- see
+# ADR-001 amendment 12 -- so it ships no levels.json and no game template may fire on it.
+KINDS = ("game", "bot", "shop", "persona", "page")
 METRICS = ("win_rate", "fail_per_session", "session_len_s", "rage_quit_rate", "thumbs_up_rate", "level_win_rate")
 LEVEL_ONLY_METRICS = ("level_win_rate",)          # meaningless without a level to measure at
 METRIC_AT = re.compile(r"^([a-z_]+)(?:@L(\d+))?$")
@@ -56,8 +59,8 @@ def shape_errors(m: dict, folder: str) -> list[str]:
         e.append(f"id {m.get('id')!r} != folder {folder!r}")
     if not ID_RE.match(str(m.get("id") or "")):
         e.append("id must match [a-z0-9][a-z0-9-]{1,31}")
-    if m.get("kind") not in ("game", "bot", "shop", "persona"):
-        e.append("kind must be game | bot | shop | persona")
+    if m.get("kind") not in KINDS:
+        e.append("kind must be " + " | ".join(KINDS))
     if not SEMVER.match(str(m.get("version") or "")):
         e.append("version must be X.Y.Z")
     for key in ("repo", "url", "rollback_ref"):

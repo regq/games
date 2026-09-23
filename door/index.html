@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Longhouse</title>
+<meta name="description" content="Rauðyr's hall: music that never stops, prints off the bench, two games in the making, and a fire that goes live from one button. Join, browse, support.">
+<meta property="og:title" content="The Longhouse">
+<meta property="og:description" content="Join the hall. Music, prints, games, live fire.">
+<meta property="og:url" content="https://regq.github.io">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0a0507;--parchment:#e8d9bd;--gold:#ffcf87;--flame:#e0742f;--ember:#c0392b;--crimson:#8b1a1a;--bronze:#8a6329;--blood:#5c0f0f}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ink);color:var(--parchment);font:18px/1.5 "Oswald","Segoe UI",sans-serif}
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 48px;
+       background:radial-gradient(ellipse at 50% 0%, #2a0c0c 0%, var(--ink) 60%)}
+  main{width:100%;max-width:720px}
+  h1{font:800 clamp(40px,9vw,72px)/1 "Cinzel",Georgia,serif;color:var(--gold);margin:24px 0 8px;letter-spacing:.04em;text-align:center}
+  .sub{text-align:center;color:var(--parchment);opacity:.85;margin:0 0 32px;font-size:20px}
+  .sub b{color:var(--gold)}
+  .ring{width:120px;height:120px;border-radius:50%;margin:0 auto;border:3px solid var(--ember);
+        box-shadow:0 0 0 8px rgba(192,57,43,.15),0 0 48px rgba(224,116,47,.25);display:grid;place-items:center;
+        font:800 44px "Cinzel",serif;color:var(--flame)}
+  .doors{display:grid;gap:14px;margin:0 0 36px}
+  .door{display:block;text-decoration:none;color:var(--parchment);background:linear-gradient(180deg,#1b0a0a,#120606);
+        border:1px solid var(--crimson);border-radius:10px;padding:18px 20px;transition:transform .12s,border-color .12s}
+  .door:hover{transform:translateY(-2px);border-color:var(--flame)}
+  .door h2{margin:0 0 4px;font:600 24px "Oswald",sans-serif;color:var(--gold)}
+  .door p{margin:0;opacity:.85}
+  .door small{display:block;margin-top:6px;color:var(--bronze);font-size:14px}
+  .door.muted{opacity:.55;border-style:dashed;pointer-events:none}
+  h3{font:600 20px "Cinzel",serif;color:var(--gold);margin:28px 0 10px;letter-spacing:.06em}
+  ul{margin:0;padding-left:20px}
+  li{margin:6px 0}
+  footer{margin-top:40px;color:var(--bronze);font-size:14px;text-align:center}
+  footer a{color:var(--bronze)}
+</style>
+</head>
+<body>
+<main>
+  <div class="ring" aria-hidden="true">ᚱ</div>
+  <h1>The Longhouse</h1>
+  <p class="sub"><b>Rauðyr</b> · Red Beast · Treasure Hunter</p>
+
+  <nav class="doors" aria-label="Doors">
+    <a class="door muted" data-door="join" data-level="1" href="#" aria-disabled="true">
+      <h2>Join the hall</h2>
+      <p>The Every:Now Discord. New tracks land daily, prints come off the bench, the devlog posts itself, and the fire announces when it is lit.</p>
+      <small>Opening soon.</small>
+    </a>
+    <a class="door" data-door="support" data-level="2" href="https://ko-fi.com/raudyr" rel="noopener">
+      <h2>Browse &amp; support</h2>
+      <p>Tracks to keep, spreadsheets that do the math, prints, and a tip jar for the fire.</p>
+      <small>Tips, memberships and downloads on Ko-fi.</small>
+    </a>
+    <a class="door" data-door="game" data-level="3" href="https://regq.github.io/games/game-01/" rel="noopener">
+      <h2>Play a game</h2>
+      <p>Fill the Band: one button, three levels, a band that shrinks. Thirty seconds in the browser, phone or desktop, no install, no account.</p>
+      <small>Free. Your thumbs vote at the end decides what ships next.</small>
+    </a>
+    <!-- workbooks live in the CrewSheetCo Etsy lane; a fourth door is added when that shop is open -->
+
+    <a class="door" data-door="twitch" data-level="4" href="https://www.twitch.tv/raudyr" rel="noopener">
+      <h2>Watch live</h2>
+      <p>The fire goes live from one button. Chat is in the hall either way.</p>
+      <small>twitch.tv/raudyr</small>
+    </a>
+  </nav>
+
+  <h3>What is inside</h3>
+  <ul>
+    <li><b>every:now</b> — a music catalog that keeps growing; first listens and drops in the hall.</li>
+    <li><b>The bench</b> — 3D prints, models, and the garage where each build gets its own thread.</li>
+    <li><b>Two games</b> — a co-op desert survival and a water puzzle, devlogs posted straight from the repos.</li>
+    <li><b>The fire</b> — streams, clips, and the people who show up for them.</li>
+  </ul>
+
+  <footer>
+    Rauðyr · every:now · the Longhouse &nbsp;·&nbsp; <a href="https://www.twitch.tv/raudyr" rel="noopener">Twitch</a>
+  </footer>
+</main>
+<script src="../shared/telemetry.js"></script>
+<script src="door.js"></script>
+<script src="spoke.js"></script>
+</body>
+</html>

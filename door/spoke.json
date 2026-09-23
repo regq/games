@@ -1,0 +1,12 @@
+{
+  "id": "door",
+  "kind": "page",
+  "version": "0.1.0",
+  "repo": "regq/games",
+  "url": "https://regq.github.io/games/door/",
+  "telemetry": { "endpoint": "https://spoke-ingest.regq.workers.dev/v1/events", "batch": 20, "flush_s": 15 },
+  "flags": {},
+  "health": { "url": "https://regq.github.io/games/door/spoke.json" },
+  "rollback_ref": "door/v0.1.0",
+  "increment": { "prompt_version": "1", "weekday": "mon" }
+}
