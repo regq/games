@@ -86,6 +86,13 @@ def _git(repo: Path, *args: str) -> str:
     return r.stdout.strip()
 
 
+def test_an_empty_site_passes_only_when_every_game_was_pulled_on_purpose(tmp_path):
+    (tmp_path / "game-01").mkdir()
+    assert cm.check(tmp_path, use_git=False) == ["no */spoke.json found"]     # nothing at all: broken checkout
+    (tmp_path / "game-01" / "spoke.pulled.json").write_text(json.dumps(GOOD), encoding="utf-8")
+    assert cm.check(tmp_path, use_git=False) == []                             # all pulled (Reg 2026-10-17)
+
+
 @pytest.fixture
 def repo(tmp_path):
     if shutil.which("git") is None:

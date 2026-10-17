@@ -38,6 +38,7 @@ jobs:
       - uses: actions/configure-pages@v5
       - name: Stage the site (each game folder + shared only; tools, tests, docs and CI never publish)
         run: |
+          shopt -s nullglob       # every game pulled (2026-10-17): no */spoke.json must stage an empty site, not a literal "*"
           rm -rf _site && mkdir -p _site/shared
           cp -r shared/. _site/shared/
           for m in */spoke.json; do d=$(dirname "$m"); mkdir -p "_site/$d"; cp -r "$d/." "_site/$d/"; done

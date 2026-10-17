@@ -168,6 +168,10 @@ def check(root: Path | None = None, use_git: bool = True) -> list[str]:
     out: list[str] = []
     found = manifests(root)
     if not found:
+        # An empty site is fine only when every game was pulled on purpose (spoke.pulled.json,
+        # Reg 2026-10-17); a repo with no manifest of either kind is still a broken checkout.
+        if any(root.glob("*/spoke.pulled.json")):
+            return []
         return ["no */spoke.json found"]
     for p in found:
         try:

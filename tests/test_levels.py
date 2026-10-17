@@ -26,7 +26,9 @@ LEVELS_NAME = "levels.json"
 def games() -> list[str]:
     """Every game folder that ships content. A game with no levels.json is not a
     failure -- not every kind of spoke has levels -- it simply has nothing here to check."""
-    return sorted(p.parent.name for p in cm.manifests() if (p.parent / LEVELS_NAME).exists())
+    # Pulled games (spoke.pulled.json, Reg 2026-10-17) keep their content checks: they can be republished.
+    folders = {p.parent for p in cm.manifests()} | {p.parent for p in ROOT.glob("*/spoke.pulled.json")}
+    return sorted(f.name for f in folders if (f / LEVELS_NAME).exists())
 
 
 def content(game: str) -> dict:
