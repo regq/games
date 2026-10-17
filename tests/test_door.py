@@ -95,7 +95,7 @@ def test_the_bounce_threshold_is_the_documented_twenty_seconds():
 
 
 def test_the_manifest_is_a_page_and_ships_no_levels():
-    m = json.loads((DOOR / "spoke.json").read_text(encoding="utf-8"))
+    m = json.loads((DOOR / "spoke.pulled.json").read_text(encoding="utf-8"))   # pulled from Pages 2026-10-17 (Reg); rename back to spoke.json to republish
     assert m["kind"] == "page" and m["id"] == "door"
     assert not (DOOR / "levels.json").exists()          # a page has no loop and no content file
     assert m["flags"] == {}

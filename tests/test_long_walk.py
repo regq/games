@@ -171,7 +171,7 @@ def test_the_two_pre_registered_variants_are_the_ones_the_gdd_named():
 
 
 def test_both_flags_ship_at_rollout_zero_so_nobody_is_in_a_canary_yet():
-    flags = json.loads((GAME / "spoke.json").read_text(encoding="utf-8"))["flags"]
+    flags = json.loads((GAME / "spoke.pulled.json").read_text(encoding="utf-8"))["flags"]   # pulled from Pages 2026-10-17 (Reg)
     assert set(flags) == {"telegraph_3s", "pass_hazard_12"}
     assert all(f["rollout"] == 0 for f in flags.values())
     on = node("return [g.applyVariants(a[0],a[1],[]).telegraph_s, g.applyVariants(a[0],a[1],['telegraph_3s']).telegraph_s];",
